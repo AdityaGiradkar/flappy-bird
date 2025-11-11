@@ -65,7 +65,7 @@ window.onload = function () {
     bgMusic.volume = 0.4;
 
     gameOverSound = new Audio("./media/audio/laparwahi.m4a");
-    gameOverSound.volume = 0.6;
+    gameOverSound.volume = 0.9;
 
     // Optional short sound when bird jumps
     jumpSound = new Audio("./media/audio/jump.m4a");
@@ -106,7 +106,7 @@ function startGame(e) {
     }
 
     // Jump (normal case)
-    velocityY = -5;
+    velocityY = -7;
     jumpSound.currentTime = 0;
     jumpSound.play().catch(() => {});
 }
@@ -182,7 +182,7 @@ function placePipes() {
     if (gameOver || !gameStarted) return;
 
     let randomPipeY = pipeY - pipeHeight / 4 - Math.random() * (pipeHeight / 2);
-    let openingSpace = board.height / 3;
+    let openingSpace = board.height / 5;
 
     let topPipe = {
         img: topPipeImg,
