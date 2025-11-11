@@ -1,2 +1,3 @@
-# flappy-bird
-just fun game
+# [Flappy Bird]
+
+-   Demo:
