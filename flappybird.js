@@ -39,8 +39,9 @@ let score = 0;
 //audio
 let bgMusic;
 let gameOverSound;
+let jumpSound;
 
-let gameStarted = false; // to track if first user interaction happened
+let gameStarted = false; // has the user started the game?
 
 window.onload = function () {
     board = document.getElementById("board");
@@ -51,9 +52,6 @@ window.onload = function () {
     //load images
     birdImg = new Image();
     birdImg.src = "./media/images/snehal.jpeg";
-    birdImg.onload = function () {
-        context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
-    };
 
     topPipeImg = new Image();
     topPipeImg.src = "./media/images/pillerTop.jpeg";
@@ -61,7 +59,7 @@ window.onload = function () {
     bottomPipeImg = new Image();
     bottomPipeImg.src = "./media/images/pillerBottom.jpeg";
 
-    //load audio files
+    //load audio
     bgMusic = new Audio("./media/audio/song.m4a");
     bgMusic.loop = true;
     bgMusic.volume = 0.4;
@@ -69,48 +67,78 @@ window.onload = function () {
     gameOverSound = new Audio("./media/audio/laparwahi.m4a");
     gameOverSound.volume = 0.6;
 
-    // Request animation & setup
-    requestAnimationFrame(update);
-    setInterval(placePipes, 1500);
+    // Optional short sound when bird jumps
+    jumpSound = new Audio("./media/audio/jump.m4a");
+    jumpSound.volume = 0.6;
 
-    // Keyboard controls (desktop)
-    document.addEventListener("keydown", moveBird);
+    // Draw the initial bird (before game starts)
+    birdImg.onload = function () {
+        context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+        context.fillStyle = "white";
+        context.font = "25px sans-serif";
+        context.fillText("Tap to Start!", 90, 320);
+    };
 
-    // Touch controls (mobile)
-    board.addEventListener("touchstart", handleTouch);
-    document.addEventListener("click", handleTouch); // fallback for desktop clicks
+    // First tap or key starts the game
+    document.addEventListener("touchstart", startGame, { passive: false });
+    document.addEventListener("mousedown", startGame);
+    document.addEventListener("keydown", startGame);
 };
 
-function handleTouch() {
-    // Start background music (needed for mobile browsers)
+function startGame(e) {
+    // Prevent scroll/tap delay
+    if (e.cancelable) e.preventDefault();
+
+    // Start for the first time
     if (!gameStarted) {
         gameStarted = true;
         bgMusic.play().catch(() => {
-            console.log("Audio play blocked until user interacts again.");
+            console.log("Waiting for user interaction to play audio...");
         });
+        requestAnimationFrame(update);
+        setInterval(placePipes, 1500);
     }
 
-    // Make the bird jump
-    velocityY = -5;
-
-    // Reset game if over
+    // If game is over → restart fully
     if (gameOver) {
-        bird.y = birdY;
-        pipeArray = [];
-        score = 0;
-        gameOver = false;
-        bgMusic.currentTime = 0;
-        bgMusic.play();
+        resetGame();
+        return;
     }
+
+    // Jump (normal case)
+    velocityY = -5;
+    jumpSound.currentTime = 0;
+    jumpSound.play().catch(() => {});
+}
+
+// 🧠 NEW: Proper reset function (fixes your issue)
+function resetGame() {
+    // Reset bird position and velocity
+    bird.y = birdY;
+    velocityY = 0;
+
+    // Clear pipes and reset score
+    pipeArray = [];
+    score = 0;
+    gameOver = false;
+
+    // Restart music
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(() => {});
+
+    // Give a tiny upward jump immediately so the bird doesn't fall
+    velocityY = -5;
+    jumpSound.currentTime = 0;
+    jumpSound.play().catch(() => {});
 }
 
 function update() {
     requestAnimationFrame(update);
-    if (gameOver) return;
+    if (!gameStarted || gameOver) return;
 
     context.clearRect(0, 0, board.width, board.height);
 
-    //bird
+    //bird physics
     velocityY += gravity;
     bird.y = Math.max(bird.y + velocityY, 0);
     context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
@@ -135,12 +163,12 @@ function update() {
         }
     }
 
-    //clear pipes
+    //remove off-screen pipes
     while (pipeArray.length > 0 && pipeArray[0].x < -pipeWidth) {
         pipeArray.shift();
     }
 
-    //score
+    //score display
     context.fillStyle = "white";
     context.font = "45px sans-serif";
     context.fillText(score, 5, 45);
@@ -151,7 +179,7 @@ function update() {
 }
 
 function placePipes() {
-    if (gameOver) return;
+    if (gameOver || !gameStarted) return;
 
     let randomPipeY = pipeY - pipeHeight / 4 - Math.random() * (pipeHeight / 2);
     let openingSpace = board.height / 3;
@@ -177,12 +205,6 @@ function placePipes() {
     pipeArray.push(bottomPipe);
 }
 
-function moveBird(e) {
-    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyX") {
-        handleTouch(); // reuse same logic for jump
-    }
-}
-
 function detectCollision(a, b) {
     return (
         a.x < b.x + b.width &&
@@ -196,6 +218,6 @@ function endGame() {
     if (!gameOver) {
         gameOver = true;
         bgMusic.pause();
-        gameOverSound.play();
+        gameOverSound.play().catch(() => {});
     }
 }
